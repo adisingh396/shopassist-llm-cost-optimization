@@ -1,0 +1,10 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+video/media/
+video/vo_cache/
+video/*.mp4
+video/*.txt
+**/runtime/
