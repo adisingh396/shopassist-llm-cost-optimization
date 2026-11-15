@@ -10,6 +10,7 @@ from question1.agent import (
     compact_thread,
     message_tokens,
     parse_resolution,
+    system_message,
 )
 from shared.billing import INPUT_PRICE, OUTPUT_PRICE, CostSession
 from shared.kb import article_ids, load_article
@@ -40,10 +41,7 @@ class TicketContext:
 class SupportPipeline:
     """triage, retrieve, compose and audit with one model call."""
 
-    system = (
-        "Resolve from policy. JSON only with action, kb_article, customer_reply. "
-        "Allowed actions: REFUND, REPLACE, SEND_ARTICLE, ESCALATE_TIER2."
-    )
+    system = system_message
 
     def __init__(self, session: CostSession | None = None):
         self.session = session or CostSession()

@@ -1,32 +1,30 @@
 # question 1: one call per ticket
 
-`SupportCopilot.handle_ticket(ticket_id)` still makes one model call. The prompt is compiled from three pieces: the complete ticket thread, order facts needed by the model, and the five policy articles.
+`SupportCopilot.handle_ticket` makes one model call. the prompt is built from three things: the customer thread, the order facts the policy cares about, and the five policy articles.
 
 ## result
 
 | ticket | input | output | points |
 |---|---:|---:|---:|
-| T-1001 | 278 | 46 | 1,524 |
-| T-1002 | 267 | 39 | 1,386 |
-| T-1003 | 256 | 39 | 1,353 |
-| T-1004 | 259 | 36 | 1,317 |
-| average | | | 1,395 |
+| T-1001 | 270 | 46 | 1,500 |
+| T-1002 | 259 | 39 | 1,362 |
+| T-1003 | 248 | 39 | 1,329 |
+| T-1004 | 251 | 36 | 1,293 |
+| average | | | 1,371 |
 
-The target is 3,000 points per ticket.
+target is 3,000 points per ticket.
 
-For T-1001, the complete calculation is:
+for T-1001 that is:
 
-```text
-278 input * 3 + 46 output * 15 = 1,524 points
+```
+270 input * 3 + 46 output * 15 = 1,500 points
 ```
 
-## prompt compiler
+## what the prompt looks like
 
-The original prompt paid for examples, a random run id, Markdown formatting and a request for a long explanation. None of that is used after parsing the response.
+```
+JSON only: action, kb_article, customer_reply. actions: REFUND REPLACE SEND_ARTICLE ESCALATE_TIER2
 
-The new prompt keeps the useful context:
-
-```text
 POLICY
 article-id:policy text
 
@@ -36,21 +34,27 @@ C:customer message|A:agent message
 ORDER_SNAPSHOT:{minified order} END_SNAPSHOT
 ```
 
-Policy cleanup only removes headings, bold markers and repeated whitespace. `order_id` and `sku` stay in application code; the model receives the product title and every policy field. New order fields pass through automatically.
+policy cleanup removes the heading, the bold marks and the blank lines. not one policy word is rewritten. `order_id` and `sku` stay in the application, the model gets the title and every policy field, and any new order field passes through on its own.
 
-The compiled prompt is checked against a 680-token input budget before the call. The response is checked locally for a known action and article id.
+before the call the finished prompt is counted and compared to 680 tokens. after the call the reply is checked for a known action and a known article id.
+
+## why the reply is short
+
+the old prompt asked the model to think step by step and quote its source. that single instruction produced a reply of about 488 tokens. it is now 46. output costs 15 per token, so most of the saving is here and not in the prompt.
 
 ## caching
 
-The static prefix is below the 1,024-token cache minimum. Padding it would lower the score in this simulator while adding data the model does not need. This version leaves caching off.
+off. the floor is 1,024 identical tokens and the prompt is 270. padding it to qualify would improve the local score while adding text a real provider bills for.
 
-## trade-offs
+## what i did not do
 
-The local client decides from `ORDER_SNAPSHOT`, so a snapshot-only prompt would also pass the tests. I kept the ticket and verbatim policy meaning because a hosted model would need both. Field aliases, TOON and compressed binary payloads were rejected because the local parser requires normal JSON keys.
+the local client decides from the order snapshot, so a prompt with only the snapshot would pass the tests at 873 points. i kept the thread and the policy because a hosted model needs both.
+
+i also did not write the policy rules into the prompt. that is cheaper, but the day a policy file changes the prompt would not.
 
 ## run
 
-```bash
+```
 python question1/run.py
 python -m pytest tests/test_question1.py -q
 ```
